@@ -27,13 +27,9 @@ case "$1" in
 
     mkdir -p "$SERVICE_ROOT" || dokku_log_fail "Unable to create service directory"
     mkdir -p "$SERVICE_ROOT/data" || dokku_log_fail "Unable to create service data directory"
-    mkdir -p "$SERVICE_ROOT/config" || dokku_log_fail "Unable to create service config directory"
-    echo -e "[mysqld]\nperformance_schema = 0" > "$SERVICE_ROOT/config/disable_performance_schema.cnf"
     rootpassword=$(openssl rand -hex 8)
-    password=$(openssl rand -hex 8)
     echo "$rootpassword" > "$SERVICE_ROOT/ROOTPASSWORD"
-    echo "$password" > "$SERVICE_ROOT/PASSWORD"
-    chmod 640 "$SERVICE_ROOT/ROOTPASSWORD" "$SERVICE_ROOT/PASSWORD"
+    chmod 640 "$SERVICE_ROOT/ROOTPASSWORD"
     touch "$LINKS_FILE"
 
     dokku_log_info1 "Starting container"
@@ -43,9 +39,10 @@ case "$1" in
       echo "" > "$SERVICE_ROOT/ENV"
     fi
     SERVICE_NAME=$(get_service_name "$SERVICE")
-    ID=$(docker run --name "$SERVICE_NAME" -v "$SERVICE_ROOT/data:/var/lib/mysql" -v "$SERVICE_ROOT/config:/etc/mysql/conf.d" -e "MYSQL_ROOT_PASSWORD=$rootpassword" -e MYSQL_USER=mysql -e "MYSQL_PASSWORD=$password" -e "MYSQL_DATABASE=$SERVICE" --env-file="$SERVICE_ROOT/ENV" -d --restart always --label dokku=service --label dokku.service=mysql "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
+    ID=$(docker run --name "$SERVICE_NAME" -v "$SERVICE_ROOT/data:/mnt/mysql_data" -e "MYSQL_ROOT_PASSWORD=$rootpassword" --env-file="$SERVICE_ROOT/ENV" -d --restart always --label dokku=service --label dokku.service=infobright "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
     echo "$ID" > "$SERVICE_ROOT/ID"
-
+    sleep 1
+    docker exec $ID mysql-ib -u root --password=$rootpassword -e "create database if not exists $SERVICE"
     dokku_log_verbose_quiet "Waiting for container to be ready"
     docker run --rm --link "$SERVICE_NAME:$PLUGIN_COMMAND_PREFIX" dokkupaas/wait > /dev/null
 
@@ -116,10 +113,10 @@ case "$1" in
     verify_service_name "$2"
     SERVICE="$2"; SERVICE_ROOT="$PLUGIN_DATA_ROOT/$SERVICE"
     SERVICE_NAME="$(get_service_name "$SERVICE")"
-    PASSWORD=$(cat "$SERVICE_ROOT/PASSWORD")
+    PASSWORD=$(cat "$SERVICE_ROOT/ROOTPASSWORD")
 
     [[ -n $SSH_TTY ]] && stty -opost
-    docker exec "$SERVICE_NAME" mysqldump --user=mysql --password="$PASSWORD" "$SERVICE"
+    docker exec "$SERVICE_NAME" mysqldump --user=root --password="$PASSWORD" "$SERVICE"
     [[ -n $SSH_TTY ]] && stty opost
     ;;
 
@@ -128,12 +125,12 @@ case "$1" in
     verify_service_name "$2"
     SERVICE="$2"; SERVICE_ROOT="$PLUGIN_DATA_ROOT/$SERVICE"
     SERVICE_NAME="$(get_service_name "$SERVICE")"
-    PASSWORD=$(cat "$SERVICE_ROOT/PASSWORD")
+    PASSWORD=$(cat "$SERVICE_ROOT/ROOTPASSWORD")
 
     if [[ -t 0 ]]; then
       dokku_log_fail "No data provided on stdin."
     fi
-    docker exec -i "$SERVICE_NAME" mysql --user=mysql --password="$PASSWORD" "$SERVICE"
+    docker exec -i "$SERVICE_NAME" mysql --user=root --password="$PASSWORD" "$SERVICE"
     ;;
 
   $PLUGIN_COMMAND_PREFIX:logs)
@@ -167,10 +164,10 @@ case "$1" in
     verify_service_name "$2"
     SERVICE="$2"; SERVICE_ROOT="$PLUGIN_DATA_ROOT/$SERVICE"
     SERVICE_NAME="$(get_service_name "$SERVICE")"
-    PASSWORD=$(cat "$SERVICE_ROOT/PASSWORD")
+    PASSWORD=$(cat "$SERVICE_ROOT/ROOTPASSWORD")
     has_tty && SERVICE_TTY_OPTS="-t"
 
-    docker exec -i $SERVICE_TTY_OPTS "$SERVICE_NAME" mysql --user=mysql --password="$PASSWORD" --database="$SERVICE"
+    docker exec -i $SERVICE_TTY_OPTS "$SERVICE_NAME" mysql-ib --user=root --password="$PASSWORD" --database="$SERVICE"
     ;;
 
   $PLUGIN_COMMAND_PREFIX:info)
