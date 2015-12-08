@@ -41,8 +41,8 @@ case "$1" in
     SERVICE_NAME=$(get_service_name "$SERVICE")
     ID=$(docker run --name "$SERVICE_NAME" -v "$SERVICE_ROOT/data:/mnt/mysql_data" -e "MYSQL_ROOT_PASSWORD=$rootpassword" --env-file="$SERVICE_ROOT/ENV" -d --restart always --label dokku=service --label dokku.service=infobright "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
     echo "$ID" > "$SERVICE_ROOT/ID"
-    sleep 1
-    docker exec $ID mysql-ib -u root --password=$rootpassword -e "create database if not exists $SERVICE"
+    docker run --rm --link "$SERVICE_NAME:$PLUGIN_COMMAND_PREFIX" dokkupaas/wait > /dev/null
+    docker exec $ID mysql-ib -u root --password=$rootpassword -e "create database if not exists \`$SERVICE\`"
     dokku_log_verbose_quiet "Waiting for container to be ready"
     docker run --rm --link "$SERVICE_NAME:$PLUGIN_COMMAND_PREFIX" dokkupaas/wait > /dev/null
 
