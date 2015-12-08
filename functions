@@ -272,7 +272,7 @@ service_url() {
 
   local PASSWORD="$(cat "$SERVICE_ROOT/ROOTPASSWORD")"
   local SERVICE_ALIAS="$(service_alias "$SERVICE")"
-  echo "$PLUGIN_SCHEME://mysql:$PASSWORD@$SERVICE_ALIAS:${PLUGIN_DATASTORE_PORTS[0]}/$SERVICE"
+  echo "$PLUGIN_SCHEME://root:$PASSWORD@$SERVICE_ALIAS:${PLUGIN_DATASTORE_PORTS[0]}/$SERVICE"
 }
 
 is_container_status () {
