@@ -12,11 +12,11 @@ Official mysql plugin for dokku. Currently defaults to installing [mysql 5.6.26]
 ```shell
 # on 0.3.x
 cd /var/lib/dokku/plugins
-git clone https://github.com/dokku/dokku-mysql.git mysql
+git clone https://github.com/dokku/dokku-dokku.git mysql
 dokku plugins-install
 
 # on 0.4.x
-dokku plugin:install https://github.com/dokku/dokku-mysql.git mysql
+dokku plugin:install https://github.com/dokku/dokku-dokku.git ib
 ```
 
 ## commands
@@ -57,6 +57,8 @@ dokku ib:info lolipop
 # container this will use native docker
 # links via the docker-options plugin
 # here we link it to our 'playground' app
+# This will also mount a read/writable directory '/import' 
+# that can be used for csv file based data import
 # NOTE: this will restart your app
 dokku ib:link lolipop playground
 

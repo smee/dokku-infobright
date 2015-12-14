@@ -27,6 +27,8 @@ case "$1" in
 
     mkdir -p "$SERVICE_ROOT" || dokku_log_fail "Unable to create service directory"
     mkdir -p "$SERVICE_ROOT/data" || dokku_log_fail "Unable to create service data directory"
+    mkdir -p "$SERVICE_ROOT/import" || dokku_log_fail "Unable to create service csv import directory"
+    
     rootpassword=$(openssl rand -hex 8)
     echo "$rootpassword" > "$SERVICE_ROOT/ROOTPASSWORD"
     chmod 640 "$SERVICE_ROOT/ROOTPASSWORD"
@@ -39,7 +41,7 @@ case "$1" in
       echo "" > "$SERVICE_ROOT/ENV"
     fi
     SERVICE_NAME=$(get_service_name "$SERVICE")
-    ID=$(docker run --name "$SERVICE_NAME" -v "$SERVICE_ROOT/data:/mnt/mysql_data" -e "MYSQL_ROOT_PASSWORD=$rootpassword" --env-file="$SERVICE_ROOT/ENV" -d --restart always --label dokku=service --label dokku.service=infobright "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
+    ID=$(docker run --name "$SERVICE_NAME" -v "$SERVICE_ROOT/data:/mnt/mysql_data" -v "$SERVICE_ROOT/import:/import" -e "MYSQL_ROOT_PASSWORD=$rootpassword" --env-file="$SERVICE_ROOT/ENV" -d --restart always --label dokku=service --label dokku.service=infobright "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
     echo "$ID" > "$SERVICE_ROOT/ID"
     docker run --rm --link "$SERVICE_NAME:$PLUGIN_COMMAND_PREFIX" dokkupaas/wait > /dev/null
     docker exec $ID mysql-ib -u root --password=$rootpassword -e "create database if not exists \`$SERVICE\`"

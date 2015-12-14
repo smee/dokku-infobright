@@ -90,6 +90,7 @@ service_link() {
     ALIAS=$(service_alternative_alias "$EXISTING_CONFIG")
   fi
   dokku docker-options:add "$APP" build,deploy,run "--link $SERVICE_NAME:$SERVICE_ALIAS"
+  dokku docker-options:add "$APP" deploy,run "--volume $SERVICE_ROOT/import:/import"
   dokku config:set "$APP" "${ALIAS}_URL=$SERVICE_URL"
 }
 
@@ -263,6 +264,7 @@ service_unlink() {
   remove_from_links_file "$SERVICE" "$APP"
 
   dokku docker-options:remove "$APP" build,deploy,run "--link $SERVICE_NAME:$SERVICE_ALIAS"
+  dokku docker-options:remove "$APP" deploy,run "--volume $SERVICE_ROOT/import:/import"
   dokku config:unset "$APP" "${LINK[*]}"
 }
 
